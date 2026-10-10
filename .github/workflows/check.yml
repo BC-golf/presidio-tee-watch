@@ -1,0 +1,64 @@
+name: Check Presidio tee times
+
+on:
+  schedule:
+    - cron: "*/10 0-6,12-23 * * *"
+  workflow_dispatch:
+    inputs:
+      diagnose:
+        description: "Diagnostic mode (shows raw data + screenshot, sends no alerts)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: tee-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Cache Playwright browser
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: pw-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
+      - run: python -m playwright install --with-deps chromium
+      - name: Restore alert history
+        uses: actions/cache/restore@v4
+        with:
+          path: state
+          key: seen-${{ github.run_id }}
+          restore-keys: seen-
+      - name: Check tee times
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          NOTIFY_EMAIL: ${{ secrets.NOTIFY_EMAIL }}
+        run: |
+          if [ "${{ inputs.diagnose }}" = "true" ]; then
+            python checker.py --discover
+          else
+            python checker.py
+          fi
+      - name: Upload diagnostic screenshot
+        if: always() && inputs.diagnose
+        uses: actions/upload-artifact@v4
+        with:
+          name: diagnostic-screenshot
+          path: discover.png
+          if-no-files-found: ignore
+      - name: Save alert history
+        if: always() && hashFiles('state/seen.json') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: state
+          key: seen-${{ github.run_id }}
