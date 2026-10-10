@@ -12,15 +12,15 @@ rules:
   - name: Saturday morning
     weekdays: [Sat]
     earliest: "07:00"
-    latest: "10:30"
-    players: 4
+    latest: "18:00"
+    players: 1
     holes: 18
 
   - name: Sunday morning
     weekdays: [Sun]
     earliest: "07:00"
-    latest: "10:30"
-    players: 4
+    latest: "18:00"
+    players: 1
     holes: 18
 
   # Example of a specific-date rule:
