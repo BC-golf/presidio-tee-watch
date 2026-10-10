@@ -28,7 +28,6 @@ from dataclasses import dataclass, asdict
 from datetime import date, datetime, timedelta
 from email.message import EmailMessage
 from pathlib import Path
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from zoneinfo import ZoneInfo
 
 import yaml
@@ -49,13 +48,14 @@ class TeeTime:
     day: str            # YYYY-MM-DD
     time: str           # HH:MM (24h)
     open_spots: int | None
+    min_group: int | None
     holes: int | None
     course: str | None
     price: float | None
 
     @property
     def key(self) -> str:
-        return f"{self.day} {self.time} {self.holes or ''}".strip()
+        return f"{self.day} {self.time} {self.holes or ''} {self.course or ''}".strip()
 
     def pretty(self) -> str:
         t = datetime.strptime(self.time, "%H:%M").strftime("%-I:%M %p")
@@ -65,8 +65,8 @@ class TeeTime:
             bits.append(f"{self.open_spots} spot{'s' if self.open_spots != 1 else ''}")
         if self.holes:
             bits.append(f"{self.holes} holes")
-        if self.price:
-            bits.append(f"${self.price:,.0f}")
+        if self.course and "10" in self.course:
+            bits.append("starts on 10")
         return " · ".join(bits)
 
 
@@ -105,6 +105,8 @@ def matches(tt: TeeTime, rule: dict) -> bool:
     need = int(rule.get("players", 1))
     if tt.open_spots is not None and tt.open_spots < need:
         return False
+    if tt.min_group is not None and need < tt.min_group:
+        return False   # slot requires a bigger group than you're booking
     if rule.get("holes") and tt.holes and int(rule["holes"]) != tt.holes:
         return False
     return True
@@ -115,8 +117,8 @@ def matches(tt: TeeTime, rule: dict) -> bool:
 # --------------------------------------------------------------------------
 
 TIME_KEYS = ("startTime", "teeTime", "teeOffTime", "time", "startDateTime", "teeTimeDateTime")
-SPOT_KEYS = ("availableParticipantNo", "availableSpots", "playersAvailable",
-             "maxPlayer", "maxPlayers", "availablePlayers", "openSlots")
+SPOT_KEYS = ("maxPlayer", "maxPlayers", "availableSpots", "playersAvailable",
+             "availablePlayers", "openSlots")
 HOLE_KEYS = ("holes", "holesDisplay", "numberOfHoles", "holeCount")
 COURSE_KEYS = ("courseName", "course", "courseDisplayName")
 PRICE_KEYS = ("shItemPrices", "shItemPrice","price", "greenFee", "displayPrice", "minPrice")
@@ -183,6 +185,7 @@ def parse_tee_times(payload: object, day: str) -> list[TeeTime]:
                     day=parsed[0],
                     time=parsed[1],
                     open_spots=_to_int(_first(node, SPOT_KEYS)),
+                    min_group=_to_int(_first(node, ("minPlayer", "minPlayers"))),
                     holes=_to_int(_first(node, HOLE_KEYS)),
                     course=(lambda c: str(c) if c else None)(_first(node, COURSE_KEYS)),
                     price=_to_float(_first(node, PRICE_KEYS)),
@@ -191,6 +194,7 @@ def parse_tee_times(payload: object, day: str) -> list[TeeTime]:
                 prev = found.get(tt.key)
                 if not prev or (tt.open_spots or 0) > (prev.open_spots or 0):
                     found[tt.key] = tt
+                return  # don't descend into a tee time's own sub-records (bookings, prices)
             for v in node.values():
                 if isinstance(v, (list, dict)):
                     walk(v)
@@ -203,34 +207,52 @@ def parse_tee_times(payload: object, day: str) -> list[TeeTime]:
 # Fetching via headless browser
 # --------------------------------------------------------------------------
 
-DATE_FORMATS = [
-    ("%a %b %d %Y", re.compile(r"^[A-Z][a-z]{2} [A-Z][a-z]{2} \d{2} \d{4}$")),
-    ("%Y-%m-%d", re.compile(r"^\d{4}-\d{2}-\d{2}$")),
-    ("%m/%d/%Y", re.compile(r"^\d{2}/\d{2}/\d{4}$")),
-    ("%Y-%m-%dT%H:%M:%S", re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$")),
-]
+# The booking page's own API flow (verified against the live site):
+#   1. POST /identityapi/myconnect/token/short   -> anonymous short-lived token
+#   2. POST .../RegisterTransactionId           -> registers a search session
+#   3. GET  .../TeeTimes?searchDate=...          -> tee times for one day
+# It runs inside the loaded page so it passes the site's bot checks the same
+# way a normal visitor does.
+FETCH_JS = r"""
+async ([dates, courseIds]) => {
+  const fd = new FormData(); fd.append('client_id', 'onlinereswebshortlived');
+  const tokRes = await fetch('/identityapi/myconnect/token/short', {method: 'POST', body: fd});
+  if (!tokRes.ok) return {error: 'token HTTP ' + tokRes.status};
+  const tok = (await tokRes.json()).access_token;
+  const H = {
+    'Authorization': 'Bearer ' + tok, 'client-id': 'onlineresweb',
+    'x-websiteid': '04a414d5-42cc-4020-88bf-08da0ea514be', 'x-siteid': '1',
+    'x-componentid': '1', 'x-moduleid': '7', 'x-productid': '1', 'x-terminalid': '3',
+    'x-ismobile': 'false', 'x-timezone-offset': '420',
+    'x-timezoneid': 'America/Los_Angeles', 'Content-Type': 'application/json'
+  };
+  const api = '/onlineres/onlineapi/api/v1/onlinereservation';
+  const txn = crypto.randomUUID();
+  const reg = await fetch(api + '/RegisterTransactionId',
+      {method: 'POST', headers: H, body: JSON.stringify({transactionId: txn})});
+  if (!reg.ok) return {error: 'register HTTP ' + reg.status};
+  const out = {};
+  for (const iso of dates) {
+    const [y, m, d] = iso.split('-').map(Number);
+    const q = new URLSearchParams({
+      searchDate: new Date(y, m - 1, d).toDateString(), holes: '0', numberOfPlayer: '0',
+      courseIds: courseIds, searchTimeType: '0', transactionId: txn,
+      teeOffTimeMin: '0', teeOffTimeMax: '23', isChangeTeeOffTime: 'true',
+      teeSheetSearchView: '5', classCode: 'R', defaultOnlineRate: 'N',
+      isUseCapacityPricing: 'false', memberStoreId: '1', searchType: '1'
+    });
+    const r = await fetch(api + '/TeeTimes?' + q, {headers: H});
+    out[iso] = r.ok ? await r.json() : {httpError: r.status};
+  }
+  return {results: out};
+}
+"""
 
-
-def swap_date_param(url: str, day: date) -> str:
-    """Replace the date query param in the captured URL, keeping its format."""
-    parts = urlsplit(url)
-    q = parse_qsl(parts.query, keep_blank_values=True)
-    out = []
-    for k, v in q:
-        if "date" in k.lower():
-            for fmt, pat in DATE_FORMATS:
-                if pat.match(v):
-                    v = day.strftime(fmt)
-                    break
-        out.append((k, v))
-    return urlunsplit(parts._replace(query=urlencode(out)))
+COURSE_IDS = "3,4"   # 3 = The Presidio (1st tee), 4 = The Presidio 10th Tee
 
 
 def fetch(dates: list[str], discover: bool = False) -> dict[str, list[TeeTime]]:
     from playwright.sync_api import sync_playwright
-
-    captured: list[dict] = []
-    results: dict[str, list[TeeTime]] = {}
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -241,70 +263,28 @@ def fetch(dates: list[str], discover: bool = False) -> dict[str, list[TeeTime]]:
                         "Chrome/129.0 Safari/537.36"),
         )
         page = ctx.new_page()
-
-        def on_response(resp):
-            if "teetime" in resp.url.lower() and resp.request.method == "GET":
-                try:
-                    body = resp.json()
-                except Exception:
-                    return
-                captured.append({"url": resp.url, "headers": resp.request.headers, "body": body})
-
-        page.on("response", on_response)
         page.goto(BOOKING_URL, wait_until="networkidle", timeout=60_000)
-        page.wait_for_timeout(4_000)
-
-        if not captured:
-            # Some versions only search after a click on a "search"/date control.
-            for label in ("Search", "Tee Times", "Book a Tee Time", "Public"):
-                try:
-                    page.get_by_text(label, exact=False).first.click(timeout=2_000)
-                    page.wait_for_timeout(3_000)
-                except Exception:
-                    pass
-                if captured:
-                    break
-
+        page.wait_for_timeout(2_000)
+        data = page.evaluate(FETCH_JS, [dates, COURSE_IDS])
         if discover:
-            print(f"Final page URL: {page.url}")
-            print(f"Captured {len(captured)} tee-time API call(s).")
-            for c in captured[:3]:
-                print("\nURL:", c["url"])
-                print("BODY (truncated):", json.dumps(c["body"])[:2500])
             page.screenshot(path=str(HERE / "discover.png"), full_page=True)
-            print("\nSaved screenshot to discover.png")
-
-        if not captured:
-            browser.close()
-            raise RuntimeError(
-                "Didn't see the tee-time API call. Run `python checker.py --discover` "
-                "and check discover.png — the booking page layout may have changed."
-            )
-
-        template = captured[-1]
-        # Strip headers the browser sets itself.
-        headers = {k: v for k, v in template["headers"].items()
-                   if not k.startswith(":") and k.lower() not in
-                   ("host", "content-length", "accept-encoding", "cookie")}
-
-        for d in dates:
-            url = swap_date_param(template["url"], date.fromisoformat(d))
-            r = ctx.request.get(url, headers=headers, timeout=30_000)
-            if not r.ok:
-                print(f"[warn] {d}: HTTP {r.status}", file=sys.stderr)
-                continue
-            try:
-                body = r.json()
-            except Exception:
-                print(f"[warn] {d}: non-JSON response", file=sys.stderr)
-                continue
-            results[d] = parse_tee_times(body, d)
-            if discover:
-                print(f"\n{d}: parsed {len(results[d])} tee times")
-                for t in results[d][:10]:
-                    print("  ", t.pretty())
-
         browser.close()
+
+    if data.get("error"):
+        raise RuntimeError(f"Booking site refused the request: {data['error']}")
+
+    results: dict[str, list[TeeTime]] = {}
+    for d, body in data["results"].items():
+        if isinstance(body, dict) and body.get("httpError"):
+            print(f"[warn] {d}: HTTP {body['httpError']}", file=sys.stderr)
+            continue
+        results[d] = parse_tee_times(body, d)
+        if discover:
+            print(f"\n{d}: {len(results[d])} open tee times")
+            if not results[d]:
+                print("   raw:", json.dumps(body)[:600])
+            for t in results[d]:
+                print("  ", t.pretty())
     return results
 
 
