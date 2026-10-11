@@ -1,6 +1,7 @@
 # Managed by the Tee Watch app. Edits made here directly also work.
 rules:
   - name: "Alerts"
+    courses: ["harding", "fleming"]
     weekdays: ["Sat", "Sun"]
     earliest: "07:00"
     latest: "18:00"
