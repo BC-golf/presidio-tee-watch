@@ -102,11 +102,13 @@ def target_dates(cfg: dict, today: date) -> dict[str, list[dict]]:
 def matches(tt: TeeTime, rule: dict) -> bool:
     if not (rule.get("earliest", "00:00") <= tt.time <= rule.get("latest", "23:59")):
         return False
-    need = int(rule.get("players", 1))
-    if tt.open_spots is not None and tt.open_spots < need:
-        return False
-    if tt.min_group is not None and need < tt.min_group:
-        return False   # slot requires a bigger group than you're booking
+    players = rule.get("players", "any")
+    if str(players).strip().lower() not in ("any", "0", ""):
+        need = int(players)
+        if tt.open_spots is not None and tt.open_spots < need:
+            return False
+        if tt.min_group is not None and need < tt.min_group:
+            return False   # slot requires a bigger group than you're booking
     if rule.get("holes") and tt.holes and int(rule["holes"]) != tt.holes:
         return False
     return True
