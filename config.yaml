@@ -1,38 +1,16 @@
-# What to watch for. Every rule is checked on each run; you get one alert
-# per newly-opened tee time that matches any rule.
-#
-# Each rule needs EITHER `dates` (specific days) OR `weekdays` (rolling —
-# checks every matching day inside the booking window).
-#
-#   earliest / latest : 24h "HH:MM", inclusive (Pacific time)
-#   players           : minimum open spots you need
-#   holes             : 18, 9, or omit for either
-
+# Managed by the Tee Watch app. Edits made here directly also work.
 rules:
-  - name: Saturday morning
-    weekdays: [Sat]
+  - name: "Saturday morning"
+    weekdays: ["Sat"]
+    earliest: "07:00"
+    latest: "18:00"
+    players: "any"
+    holes: 18
+  - name: "Sunday morning"
+    weekdays: ["Sun"]
     earliest: "07:00"
     latest: "18:00"
     players: 1
     holes: 18
-
-  - name: Sunday morning
-    weekdays: [Sun]
-    earliest: "07:00"
-    latest: "18:00"
-    players: 1
-    holes: 18
-
-  # Example of a specific-date rule:
-  # - name: Katie birthday round
-  #   dates: ["2026-11-14"]
-  #   earliest: "08:00"
-  #   latest: "13:00"
-  #   players: 2
-
-# How many days ahead the public can book. Presidio's public window is short;
-# loyalty-club members get up to 14 days. Set this to what you can actually book.
 booking_window_days: 7
-
-# Days of the week to skip entirely, even if a rule matches (rarely needed).
 skip_dates: []
