@@ -1,6 +1,6 @@
 # Managed by the Tee Watch app. Edits made here directly also work.
 rules:
-  - name: "Saturday morning"
+  - name: "Alerts"
     weekdays: ["Sat"]
     earliest: "07:00"
     latest: "18:00"
