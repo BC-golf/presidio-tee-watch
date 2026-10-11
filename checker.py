@@ -365,21 +365,51 @@ def parse_harding(raw: dict[str, dict], day: str) -> list[TeeTime]:
     return sorted(out, key=lambda x: (x.time, x.course))
 
 
+def _start_virtual_screen():
+    """Start a virtual display (Xvfb) so Chrome can run as a normal, non-headless
+    window on a server. Returns the process, or None if Xvfb isn't available."""
+    import shutil, subprocess, time
+    if os.getenv("DISPLAY") or not shutil.which("Xvfb"):
+        return None
+    proc = subprocess.Popen(["Xvfb", ":99", "-screen", "0", "1366x900x24", "-nolisten", "tcp"],
+                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    time.sleep(1.5)
+    if proc.poll() is not None:
+        return None
+    os.environ["DISPLAY"] = ":99"
+    return proc
+
+
 def fetch_harding(p, dates: list[str], sizes: list[int], discover: bool) -> dict[str, list[TeeTime]]:
-    # Harding sits behind a "verifying you are human" check, so use a full
-    # (new-headless) Chromium when available and give the check time to clear.
-    args = ["--disable-blink-features=AutomationControlled"]
+    # Harding sits behind a "verifying you are human" check that blocks headless
+    # browsers. Best chance: real Google Chrome (preinstalled on GitHub's
+    # servers) running as a normal window on a virtual screen.
+    xvfb = _start_virtual_screen()
+    headless = xvfb is None and not os.getenv("DISPLAY")
+    args = ["--disable-blink-features=AutomationControlled", "--window-size=1366,900"]
+    browser, mode = None, ""
+    for channel in ("chrome", "chromium", None):
+        try:
+            kw = {"channel": channel} if channel else {}
+            browser = p.chromium.launch(headless=headless, args=args, **kw)
+            mode = f"{channel or 'bundled'} {'headless' if headless else 'windowed'}"
+            break
+        except Exception:
+            continue
+    if browser is None:
+        raise RuntimeError("couldn't start a browser for Harding Park")
+    if discover:
+        print(f"Harding browser: {mode}")
     try:
-        browser = p.chromium.launch(channel="chromium", headless=True, args=args)
-    except Exception:
-        browser = p.chromium.launch(headless=True, args=args)
-    try:
-        ctx = browser.new_context(timezone_id="America/Los_Angeles", user_agent=UA,
-                                  locale="en-US", viewport={"width": 1280, "height": 900})
+        ctx_kw = dict(timezone_id="America/Los_Angeles", locale="en-US",
+                      viewport={"width": 1366, "height": 900})
+        if headless:
+            ctx_kw["user_agent"] = UA          # hide "HeadlessChrome"
+        ctx = browser.new_context(**ctx_kw)
         ctx.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         page = ctx.new_page()
         page.goto(HARDING_URL, wait_until="domcontentloaded", timeout=60_000)
-        for _ in range(30):                       # up to ~45s for the human check
+        for _ in range(40):                       # up to ~60s for the human check
             if "just a moment" not in (page.title() or "").lower():
                 break
             page.wait_for_timeout(1_500)
@@ -394,6 +424,8 @@ def fetch_harding(p, dates: list[str], sizes: list[int], discover: bool) -> dict
         data = page.evaluate(HARDING_JS, [dates, sizes])
     finally:
         browser.close()
+        if xvfb:
+            xvfb.terminate()
     if data.get("error"):
         raise RuntimeError(f"Harding booking site refused the request: {data['error']}")
     out = {}
@@ -422,6 +454,7 @@ def fetch(targets: dict[str, list[dict]], discover: bool = False):
 
     results: dict[str, list[TeeTime]] = {}
     checked: set[tuple[str, str]] = set()
+    presidio_failed = False
     with sync_playwright() as p:
         if p_dates:
             try:
@@ -433,6 +466,7 @@ def fetch(targets: dict[str, list[dict]], discover: bool = False):
                 finally:
                     browser.close()
             except Exception as e:
+                presidio_failed = True
                 print(f"[warn] Presidio check failed: {e}", file=sys.stderr)
         if h_dates:
             try:
@@ -447,8 +481,10 @@ def fetch(targets: dict[str, list[dict]], discover: bool = False):
             print(f"\n{d}: {len(results[d])} open tee times")
             for t in sorted(results[d], key=lambda x: (x.site, x.time)):
                 print("  ", t.pretty())
-    if (p_dates or h_dates) and not checked:
-        raise RuntimeError("No course could be checked — see warnings above.")
+    # Presidio has been reliable, so a Presidio failure is worth a red X in
+    # GitHub. Harding failures only warn (its bot check can block at times).
+    if presidio_failed:
+        raise RuntimeError("Presidio could not be checked — see warnings above.")
     return results, checked
 
 
