@@ -385,21 +385,28 @@ def fetch_harding(p, dates: list[str], sizes: list[int], discover: bool) -> dict
     # browsers. Best chance: real Google Chrome (preinstalled on GitHub's
     # servers) running as a normal window on a virtual screen.
     xvfb = _start_virtual_screen()
-    headless = xvfb is None and not os.getenv("DISPLAY")
-    args = ["--disable-blink-features=AutomationControlled", "--window-size=1366,900"]
-    browser, mode = None, ""
-    for channel in ("chrome", "chromium", None):
+    can_window = bool(os.getenv("DISPLAY"))
+    args = ["--disable-blink-features=AutomationControlled", "--window-size=1366,900",
+            "--no-sandbox"]
+    browser, mode, headless, errors = None, "", True, []
+    attempts = ([(False, c) for c in ("chrome", "chromium", None)] if can_window else []) + \
+               [(True, c) for c in ("chrome", "chromium", None)]
+    for hl, channel in attempts:
         try:
             kw = {"channel": channel} if channel else {}
-            browser = p.chromium.launch(headless=headless, args=args, **kw)
-            mode = f"{channel or 'bundled'} {'headless' if headless else 'windowed'}"
+            browser = p.chromium.launch(headless=hl, args=args, timeout=45_000, **kw)
+            headless, mode = hl, f"{channel or 'bundled'} {'headless' if hl else 'windowed'}"
             break
-        except Exception:
-            continue
+        except Exception as e:
+            first = (str(e).strip().splitlines() or ["?"])[0][:160]
+            errors.append(f"{channel or 'bundled'}/{'headless' if hl else 'windowed'}: {first}")
+    print(f"Harding browser: {mode or 'none'} (virtual screen: {'yes' if xvfb else 'no'})")
+    if errors:
+        print("  launch problems: " + " | ".join(errors))
     if browser is None:
+        if xvfb:
+            xvfb.terminate()
         raise RuntimeError("couldn't start a browser for Harding Park")
-    if discover:
-        print(f"Harding browser: {mode}")
     try:
         ctx_kw = dict(timezone_id="America/Los_Angeles", locale="en-US",
                       viewport={"width": 1366, "height": 900})
