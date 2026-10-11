@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tee Watch</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tee Watch">
+<meta name="theme-color" content="#0f3d2e">
+<link rel="apple-touch-icon" href="data:image/png;base64,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">
+<link rel="icon" href="data:image/png;base64,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">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+<style>
+:root{
+  --bg:#f4f1e8; --card:#ffffff; --ink:#14231c; --muted:#5d6b63; --line:#e3ddcc;
+  --green:#0f3d2e; --fair:#2f7d4f; --fair-soft:#e3f0e7; --flag:#d8483a; --chip:#efeadb;
+  --shadow:0 1px 2px rgba(20,35,28,.06),0 4px 14px rgba(20,35,28,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0c1511; --card:#15211b; --ink:#eef2ec; --muted:#9aaba1; --line:#24342b;
+    --green:#0f3d2e; --fair:#4fae76; --fair-soft:#1b3326; --flag:#ef6a5b; --chip:#1e2c24;
+    --shadow:none;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0c1511; --card:#15211b; --ink:#eef2ec; --muted:#9aaba1; --line:#24342b;
+  --green:#0f3d2e; --fair:#4fae76; --fair-soft:#1b3326; --flag:#ef6a5b; --chip:#1e2c24;
+  --shadow:none;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);
+  font:16px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif}
+button,input,select{font:inherit;color:inherit}
+.hero{background:var(--green);color:#f5f1e6;padding:calc(env(safe-area-inset-top) + 18px) 16px 22px}
+.hero-row{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:560px;margin:0 auto}
+.brand{display:flex;align-items:center;gap:10px}
+.brand svg{flex:none}
+.brand h1{font-size:22px;margin:0;letter-spacing:-.01em}
+.brand p{margin:0;font-size:13px;opacity:.75}
+.iconbtn{background:rgba(255,255,255,.1);border:0;border-radius:10px;width:38px;height:38px;
+  display:grid;place-items:center;color:#f5f1e6;cursor:pointer}
+.status{max-width:560px;margin:16px auto 0;background:rgba(255,255,255,.08);border-radius:16px;
+  padding:14px 14px;display:flex;align-items:center;gap:12px}
+.status .txt{flex:1;min-width:0}
+.status strong{display:block;font-size:17px}
+.status small{display:block;opacity:.75;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.status small a{color:inherit}
+.dot{width:10px;height:10px;border-radius:50%;background:#8a9a90;flex:none}
+.dot.on{background:#6fe39b;box-shadow:0 0 0 4px rgba(111,227,155,.18)}
+.switch{position:relative;width:52px;height:32px;flex:none}
+.switch input{opacity:0;width:100%;height:100%;position:absolute;margin:0;cursor:pointer;z-index:1}
+.switch span{position:absolute;inset:0;border-radius:32px;background:rgba(255,255,255,.25);transition:.2s}
+.switch span::after{content:"";position:absolute;width:26px;height:26px;left:3px;top:3px;border-radius:50%;
+  background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.switch input:checked+span{background:#4fae76}
+.switch input:checked+span::after{transform:translateX(20px)}
+main{max-width:560px;margin:0 auto;padding:18px 16px calc(env(safe-area-inset-bottom) + 110px)}
+.sec{display:flex;align-items:baseline;justify-content:space-between;margin:6px 4px 10px}
+.sec h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0;font-weight:600}
+.link{background:none;border:0;color:var(--fair);font-weight:600;cursor:pointer;padding:4px}
+.card{background:var(--card);border-radius:18px;box-shadow:var(--shadow);border:1px solid var(--line);
+  padding:14px;margin-bottom:12px}
+.card-head{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.name{flex:1;min-width:0;border:0;background:transparent;font-size:18px;font-weight:650;padding:2px 0;outline:none}
+.name:focus{border-bottom:2px solid var(--fair)}
+.del{background:none;border:0;color:var(--muted);cursor:pointer;padding:6px;border-radius:8px}
+.row{margin-top:12px}
+.label{font-size:12px;color:var(--muted);font-weight:600;margin:0 0 6px 2px;text-transform:uppercase;letter-spacing:.06em}
+.seg{display:flex;background:var(--chip);border-radius:11px;padding:3px;gap:2px}
+.seg button{flex:1;border:0;background:transparent;border-radius:9px;padding:7px 0;font-size:14px;font-weight:600;
+  color:var(--muted);cursor:pointer}
+.seg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.days button{border:0;border-radius:10px;background:var(--chip);padding:9px 0;font-size:13px;font-weight:650;
+  color:var(--muted);cursor:pointer}
+.days button.on{background:var(--fair);color:#fff}
+.times{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center}
+.times span{color:var(--muted);font-size:14px}
+input[type=time],input[type=date],input[type=text],input[type=password],input[type=number]{
+  width:100%;border:1px solid var(--line);background:var(--bg);border-radius:11px;padding:10px 12px;
+  min-height:44px;-webkit-appearance:none;appearance:none}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.chip{display:inline-flex;align-items:center;gap:4px;background:var(--fair-soft);color:var(--ink);border-radius:20px;
+  padding:5px 6px 5px 12px;font-size:14px;font-weight:600}
+.chip button{border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:16px;line-height:1;padding:2px 6px}
+.warn{color:var(--flag);font-size:13px;margin:10px 2px 0}
+.add{width:100%;border:1.5px dashed var(--line);background:transparent;border-radius:18px;padding:14px;
+  color:var(--fair);font-weight:650;cursor:pointer;margin-bottom:22px}
+.setting{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.setting p{margin:0}
+.setting small{color:var(--muted);font-size:13px;display:block}
+.stepper{display:flex;align-items:center;gap:4px;background:var(--chip);border-radius:11px;padding:3px}
+.stepper button{border:0;background:var(--card);width:34px;height:34px;border-radius:9px;font-size:18px;cursor:pointer}
+.stepper b{min-width:28px;text-align:center}
+.btn{display:block;width:100%;border:0;border-radius:14px;padding:15px;font-weight:700;font-size:16px;cursor:pointer}
+.btn.primary{background:var(--fair);color:#fff}
+.btn.ghost{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+.btn:disabled{opacity:.55}
+.savebar{position:fixed;left:0;right:0;bottom:0;padding:12px 16px calc(env(safe-area-inset-bottom) + 12px);
+  background:linear-gradient(to top,var(--bg) 70%,transparent);transform:translateY(120%);transition:.25s}
+.savebar.show{transform:none}
+.savebar .btn{max-width:528px;margin:0 auto;box-shadow:0 6px 20px rgba(15,61,46,.3)}
+.toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 12px);transform:translate(-50%,-150%);
+  background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;font-weight:600;
+  transition:.25s;z-index:9;max-width:calc(100% - 32px);text-align:center}
+.toast.show{transform:translate(-50%,0)}
+.setup h2{font-size:20px;margin:4px 0 6px}
+.setup p,.setup li{color:var(--muted);font-size:14px}
+.setup ol{padding-left:20px;margin:8px 0 14px}
+.setup label{display:block;font-size:13px;font-weight:600;margin:12px 2px 6px}
+.setup a{color:var(--fair)}
+.err{color:var(--flag);font-size:14px;margin:10px 2px 0;min-height:1em}
+.hidden{display:none!important}
+.loading{text-align:center;color:var(--muted);padding:40px 0}
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="hero-row">
+    <div class="brand">
+      <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><ellipse cx="17" cy="27" rx="13" ry="5" fill="#2f7d4f"/><ellipse cx="17" cy="27.5" rx="1.8" ry=".9" fill="#0a1e16"/><rect x="16.3" y="5" width="1.4" height="22" fill="#f5f1e6"/><path d="M17.7 5v8l9-4z" fill="#e24e3e"/></svg>
+      <div><h1>Tee Watch</h1><p>Presidio Golf Course</p></div>
+    </div>
+    <button class="iconbtn hidden" id="gear" aria-label="Connection settings">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+  </div>
+  <div class="status hidden" id="status">
+    <div class="dot" id="dot"></div>
+    <div class="txt"><strong id="statusTitle">…</strong><small id="statusSub">&nbsp;</small></div>
+    <label class="switch" aria-label="Watching on or off"><input type="checkbox" id="power"><span></span></label>
+  </div>
+</header>
+
+<main>
+  <section id="setup" class="setup hidden">
+    <div class="card">
+      <h2>Connect to your checker</h2>
+      <p>This app edits the settings in your GitHub project. It needs a one-time access key that only works on that project.</p>
+      <ol>
+        <li>Open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">GitHub → new access token</a>.</li>
+        <li>Name it "Tee Watch". Set expiration as long as allowed.</li>
+        <li>Repository access: <b>Only select repositories</b> → <b>presidio-tee-watch</b>.</li>
+        <li>Permissions → Repository: <b>Actions</b> = Read and write, <b>Contents</b> = Read and write.</li>
+        <li>Tap <b>Generate token</b>, copy it, and paste it below.</li>
+      </ol>
+      <label for="owner">GitHub username</label>
+      <input type="text" id="owner" autocapitalize="off" autocorrect="off" spellcheck="false">
+      <label for="repo">Project name</label>
+      <input type="text" id="repo" autocapitalize="off" autocorrect="off" spellcheck="false">
+      <label for="token">Access token</label>
+      <input type="password" id="token" placeholder="github_pat_…" autocapitalize="off" autocorrect="off" spellcheck="false">
+      <div class="err" id="setupErr"></div>
+      <button class="btn primary" id="connect" style="margin-top:12px">Connect</button>
+    </div>
+    <p style="text-align:center;font-size:13px">The key is stored only on this phone.</p>
+  </section>
+
+  <section id="app" class="hidden">
+    <div class="sec"><h2>Alerts</h2></div>
+    <div id="rules"></div>
+    <button class="add" id="addRule">+ Add an alert</button>
+
+    <div class="sec"><h2>Settings</h2></div>
+    <div class="card">
+      <div class="setting">
+        <p>Look ahead<small>Days ahead to check for weekly alerts</small></p>
+        <div class="stepper"><button id="winDown" aria-label="Fewer days">−</button><b id="win">7</b><button id="winUp" aria-label="More days">+</button></div>
+      </div>
+    </div>
+    <button class="btn ghost" id="checkNow" style="margin-top:8px">Check now</button>
+  </section>
+
+  <div class="loading" id="loading">Loading…</div>
+</main>
+
+<div class="savebar" id="savebar"><button class="btn primary" id="save">Save changes</button></div>
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+const DAYS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+const WORKFLOW = "check.yml";
+const CFG_PATH = "config.yaml";
+const $ = id => document.getElementById(id);
+const store = {
+  get(k){ try { return localStorage.getItem(k) } catch(e){ return null } },
+  set(k,v){ try { localStorage.setItem(k,v) } catch(e){} },
+  del(k){ try { localStorage.removeItem(k) } catch(e){} }
+};
+
+let conn = { owner: store.get("tw_owner") || guessOwner(), repo: store.get("tw_repo") || guessRepo(), token: store.get("tw_token") || "" };
+let cfg = null, sha = null, branch = "main", dirty = false;
+
+function guessOwner(){ const h = location.hostname; return h.endsWith(".github.io") ? h.split(".")[0] : "BC-golf"; }
+function guessRepo(){ const p = location.pathname.split("/").filter(Boolean)[0]; return location.hostname.endsWith(".github.io") && p ? p : "presidio-tee-watch"; }
+
+function toast(msg, ms=2200){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove("show"),ms); }
+
+async function gh(path, opts={}){
+  const headers = { "Authorization": "Bearer " + conn.token, "Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" };
+  if (opts.body) headers["Content-Type"] = "application/json";
+  const r = await fetch(`https://api.github.com/repos/${conn.owner}/${conn.repo}${path}`, { ...opts, headers, cache: "no-store" });
+  if (!r.ok) {
+    let m = ""; try { m = (await r.json()).message } catch(e){}
+    const err = new Error(m || ("HTTP " + r.status)); err.status = r.status; throw err;
+  }
+  return r.status === 204 ? null : r.json();
+}
+
+const b64decode = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\n/g,"")), c => c.charCodeAt(0)));
+const b64encode = s => { const b = new TextEncoder().encode(s); let x=""; b.forEach(c => x += String.fromCharCode(c)); return btoa(x); };
+
+/* ---------- views ---------- */
+function show(view){
+  $("loading").classList.toggle("hidden", view !== "loading");
+  $("setup").classList.toggle("hidden", view !== "setup");
+  $("app").classList.toggle("hidden", view !== "app");
+  $("status").classList.toggle("hidden", view !== "app");
+  $("gear").classList.toggle("hidden", view !== "app");
+}
+
+function openSetup(msg){
+  $("owner").value = conn.owner; $("repo").value = conn.repo; $("token").value = conn.token;
+  $("setupErr").textContent = msg || "";
+  show("setup");
+}
+
+$("connect").onclick = async () => {
+  conn = { owner: $("owner").value.trim(), repo: $("repo").value.trim(), token: $("token").value.trim() };
+  if (!conn.owner || !conn.repo || !conn.token) { $("setupErr").textContent = "Fill in all three fields."; return; }
+  $("connect").disabled = true; $("connect").textContent = "Connecting…";
+  try {
+    await gh("");
+    store.set("tw_owner", conn.owner); store.set("tw_repo", conn.repo); store.set("tw_token", conn.token);
+    await loadAll();
+  } catch(e) {
+    $("setupErr").textContent = e.status === 401 ? "That token wasn't accepted. Copy it again and paste it."
+      : e.status === 404 ? "Couldn't find that project. Check the username and project name, and that the token includes this project."
+      : "Couldn't connect: " + e.message;
+  } finally { $("connect").disabled = false; $("connect").textContent = "Connect"; }
+};
+$("gear").onclick = () => {
+  if (dirty && !confirm("You have unsaved changes. Leave anyway?")) return;
+  openSetup();
+};
+
+/* ---------- load ---------- */
+async function loadAll(){
+  show("loading");
+  try {
+    const [repoInfo, file] = await Promise.all([ gh(""), gh(`/contents/${CFG_PATH}`) ]);
+    branch = repoInfo.default_branch || "main";
+    sha = file.sha;
+    cfg = jsyaml.load(b64decode(file.content)) || {};
+    if (!Array.isArray(cfg.rules)) cfg.rules = [];
+    cfg.rules = cfg.rules.map(normalize);
+    if (!cfg.booking_window_days) cfg.booking_window_days = 7;
+    setDirty(false);
+    renderRules(); renderWindow();
+    show("app");
+    refreshStatus();
+  } catch(e) {
+    if (e.status === 401 || e.status === 403 || e.status === 404) openSetup("Couldn't open your project (" + e.message + "). Re-check the details below.");
+    else { show("app"); toast("Couldn't load: " + e.message, 4000); }
+  }
+}
+
+function normalize(r){
+  const out = { name: r.name || "Alert", earliest: String(r.earliest || "07:00"), latest: String(r.latest || "18:00"),
+    players: (r.players === undefined || r.players === null || String(r.players).toLowerCase() === "any" || +r.players === 0) ? "any" : +r.players,
+    holes: r.holes ? +r.holes : null };
+  if (Array.isArray(r.dates) && r.dates.length) out.dates = r.dates.map(String);
+  else out.weekdays = (r.weekdays || []).map(d => String(d).slice(0,3).replace(/^./, c => c.toUpperCase()));
+  for (const k of ["earliest","latest"]) if (/^\d{3,4}$/.test(out[k])) out[k] = out[k].padStart(4,"0").replace(/(\d\d)(\d\d)/,"$1:$2");
+  return out;
+}
+
+async function refreshStatus(){
+  try {
+    const [wf, runs] = await Promise.all([ gh(`/actions/workflows/${WORKFLOW}`), gh(`/actions/runs?per_page=1`) ]);
+    const on = wf.state === "active";
+    $("power").checked = on;
+    $("dot").classList.toggle("on", on);
+    $("statusTitle").textContent = on ? "Watching" : "Paused";
+    const run = runs.workflow_runs && runs.workflow_runs[0];
+    if (run) {
+      const when = ago(new Date(run.created_at));
+      const state = run.status !== "completed" ? "running now" : (run.conclusion === "success" ? "✓ OK" : "⚠ " + run.conclusion);
+      $("statusSub").innerHTML = `Last check ${when} · <a href="${run.html_url}" target="_blank" rel="noopener">${state}</a>`;
+    } else $("statusSub").textContent = on ? "Checks every 10 min, 5am–10pm" : "No checks yet";
+  } catch(e) { $("statusSub").textContent = "Status unavailable"; }
+}
+function ago(d){ const m = Math.round((Date.now() - d) / 60000);
+  if (m < 1) return "just now"; if (m < 60) return m + " min ago";
+  const h = Math.round(m/60); if (h < 24) return h + " hr ago";
+  return d.toLocaleDateString(undefined,{month:"short",day:"numeric"}); }
+
+$("power").onchange = async e => {
+  const on = e.target.checked;
+  try {
+    await gh(`/actions/workflows/${WORKFLOW}/${on ? "enable" : "disable"}`, { method: "PUT" });
+    toast(on ? "Watching for tee times" : "Paused — no alerts");
+  } catch(err) { e.target.checked = !on; toast("Couldn't change: " + err.message, 4000); }
+  refreshStatus();
+};
+
+$("checkNow").onclick = async () => {
+  const b = $("checkNow"); b.disabled = true; b.textContent = "Starting…";
+  try {
+    await gh(`/actions/workflows/${WORKFLOW}/dispatches`, { method: "POST", body: JSON.stringify({ ref: branch }) });
+    toast("Check started — results in ~2 min");
+    setTimeout(refreshStatus, 6000);
+  } catch(e) { toast(e.status === 422 ? "Turn watching on first" : "Couldn't start: " + e.message, 4000); }
+  finally { b.disabled = false; b.textContent = "Check now"; }
+};
+
+/* ---------- editing ---------- */
+function setDirty(v){ dirty = v; $("savebar").classList.toggle("show", v); }
+
+function seg(options, value, onPick){
+  const el = document.createElement("div"); el.className = "seg";
+  options.forEach(([v, label]) => {
+    const b = document.createElement("button"); b.type = "button"; b.textContent = label;
+    if (v === value) b.classList.add("on");
+    b.onclick = () => { onPick(v); };
+    el.appendChild(b);
+  });
+  return el;
+}
+function row(label, child){ const r = document.createElement("div"); r.className = "row";
+  const l = document.createElement("div"); l.className = "label"; l.textContent = label; r.append(l, child); return r; }
+
+function fmtDate(iso){ const [y,m,d] = iso.split("-").map(Number); return new Date(y,m-1,d).toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"}); }
+
+function renderRules(){
+  const wrap = $("rules"); wrap.innerHTML = "";
+  if (!cfg.rules.length) {
+    const c = document.createElement("div"); c.className = "card";
+    c.innerHTML = '<p style="margin:0;color:var(--muted)">No alerts yet. Add one below.</p>'; wrap.appendChild(c);
+  }
+  cfg.rules.forEach((r, i) => {
+    const card = document.createElement("div"); card.className = "card";
+
+    const head = document.createElement("div"); head.className = "card-head";
+    const name = document.createElement("input"); name.className = "name"; name.value = r.name; name.setAttribute("aria-label","Alert name");
+    name.oninput = () => { r.name = name.value; setDirty(true); };
+    const del = document.createElement("button"); del.className = "del"; del.setAttribute("aria-label","Delete alert");
+    del.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>';
+    del.onclick = () => { if (confirm(`Delete "${r.name}"?`)) { cfg.rules.splice(i,1); setDirty(true); renderRules(); } };
+    head.append(name, del); card.appendChild(head);
+
+    const mode = r.dates ? "dates" : "weekly";
+    card.appendChild(seg([["weekly","Every week"],["dates","Specific dates"]], mode, v => {
+      if (v === mode) return;
+      if (v === "dates") { delete r.weekdays; r.dates = []; } else { delete r.dates; r.weekdays = ["Sat","Sun"]; }
+      setDirty(true); renderRules();
+    }));
+
+    if (mode === "weekly") {
+      const days = document.createElement("div"); days.className = "days";
+      DAYS.forEach(d => {
+        const b = document.createElement("button"); b.type = "button"; b.textContent = d.slice(0,2);
+        b.setAttribute("aria-label", d); b.setAttribute("aria-pressed", r.weekdays.includes(d));
+        if (r.weekdays.includes(d)) b.classList.add("on");
+        b.onclick = () => {
+          r.weekdays = r.weekdays.includes(d) ? r.weekdays.filter(x => x !== d) : DAYS.filter(x => x === d || r.weekdays.includes(x));
+          setDirty(true); renderRules();
+        };
+        days.appendChild(b);
+      });
+      card.appendChild(row("Days", days));
+    } else {
+      const box = document.createElement("div");
+      const chips = document.createElement("div"); chips.className = "chips";
+      r.dates.slice().sort().forEach(iso => {
+        const c = document.createElement("span"); c.className = "chip"; c.textContent = fmtDate(iso);
+        const x = document.createElement("button"); x.type = "button"; x.textContent = "×"; x.setAttribute("aria-label","Remove " + iso);
+        x.onclick = () => { r.dates = r.dates.filter(v => v !== iso); setDirty(true); renderRules(); };
+        c.appendChild(x); chips.appendChild(c);
+      });
+      const pick = document.createElement("input"); pick.type = "date"; pick.setAttribute("aria-label","Add a date");
+      const t = new Date(); pick.min = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,"0")}-${String(t.getDate()).padStart(2,"0")}`;
+      pick.onchange = () => { if (pick.value && !r.dates.includes(pick.value)) { r.dates.push(pick.value); setDirty(true); renderRules(); } };
+      box.append(chips, pick);
+      card.appendChild(row("Dates (tap to add)", box));
+    }
+
+    const times = document.createElement("div"); times.className = "times";
+    const e = document.createElement("input"); e.type = "time"; e.value = r.earliest; e.step = 600; e.setAttribute("aria-label","Earliest");
+    const l = document.createElement("input"); l.type = "time"; l.value = r.latest; l.step = 600; l.setAttribute("aria-label","Latest");
+    const to = document.createElement("span"); to.textContent = "to";
+    e.onchange = () => { r.earliest = e.value || "00:00"; setDirty(true); renderRules(); };
+    l.onchange = () => { r.latest = l.value || "23:59"; setDirty(true); renderRules(); };
+    times.append(e, to, l);
+    card.appendChild(row("Tee time between", times));
+
+    card.appendChild(row("Golfers", seg([["any","Any"],[1,"1"],[2,"2"],[3,"3"],[4,"4"]], r.players, v => { r.players = v; setDirty(true); renderRules(); })));
+    card.appendChild(row("Holes", seg([[null,"Any"],[18,"18"],[9,"9"]], r.holes, v => { r.holes = v; setDirty(true); renderRules(); })));
+
+    const problems = [];
+    if (mode === "weekly" && !r.weekdays.length) problems.push("Pick at least one day.");
+    if (mode === "dates" && !r.dates.length) problems.push("Add at least one date.");
+    if (r.earliest > r.latest) problems.push("Start time is after end time.");
+    if (problems.length) { const w = document.createElement("p"); w.className = "warn"; w.textContent = problems.join(" "); card.appendChild(w); }
+
+    wrap.appendChild(card);
+  });
+}
+
+function renderWindow(){ $("win").textContent = cfg.booking_window_days; }
+$("winDown").onclick = () => { cfg.booking_window_days = Math.max(1, cfg.booking_window_days - 1); renderWindow(); setDirty(true); };
+$("winUp").onclick = () => { cfg.booking_window_days = Math.min(30, cfg.booking_window_days + 1); renderWindow(); setDirty(true); };
+
+$("addRule").onclick = () => {
+  cfg.rules.push({ name: "New alert", weekdays: ["Sat","Sun"], earliest: "07:00", latest: "11:00", players: "any", holes: null });
+  setDirty(true); renderRules();
+  const names = document.querySelectorAll(".name"); const last = names[names.length-1];
+  if (last) { last.scrollIntoView({behavior:"smooth", block:"center"}); last.select(); }
+};
+
+function toYaml(){
+  const out = { ...cfg, rules: cfg.rules.map(r => {
+    const o = { name: r.name.trim() || "Alert" };
+    if (r.dates) o.dates = r.dates.slice().sort(); else o.weekdays = r.weekdays;
+    o.earliest = r.earliest; o.latest = r.latest; o.players = r.players;
+    if (r.holes) o.holes = r.holes;
+    return o;
+  })};
+  return "# Managed by the Tee Watch app. Edits made here directly also work.\n" +
+    jsyaml.dump(out, { forceQuotes: true, quotingType: '"', lineWidth: -1, flowLevel: 3, noRefs: true });
+}
+
+$("save").onclick = async () => {
+  const bad = cfg.rules.some(r => (r.weekdays && !r.weekdays.length) || (r.dates && !r.dates.length) || r.earliest > r.latest);
+  if (bad) { toast("Fix the alerts marked in red first", 3000); return; }
+  const b = $("save"); b.disabled = true; b.textContent = "Saving…";
+  try {
+    const res = await gh(`/contents/${CFG_PATH}`, { method: "PUT", body: JSON.stringify({
+      message: "Update alerts from Tee Watch app", content: b64encode(toYaml()), sha, branch }) });
+    sha = res.content.sha;
+    setDirty(false); toast("Saved — takes effect on the next check");
+  } catch(e) {
+    toast(e.status === 409 ? "Settings changed elsewhere — reloading" : "Couldn't save: " + e.message, 4000);
+    if (e.status === 409) loadAll();
+  } finally { b.disabled = false; b.textContent = "Save changes"; }
+};
+
+window.addEventListener("beforeunload", e => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
+document.addEventListener("visibilitychange", () => { if (!document.hidden && cfg) refreshStatus(); });
+
+if (typeof jsyaml === "undefined") { show("setup"); $("setupErr").textContent = "Couldn't load a needed file. Check your connection and reopen the app."; return; }
+if (conn.token) loadAll(); else openSetup();
+})();
+</script>
+</body>
+</html>
