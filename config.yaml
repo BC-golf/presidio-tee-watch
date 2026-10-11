@@ -6,11 +6,5 @@ rules:
     latest: "18:00"
     players: "any"
     holes: 18
-  - name: "Sunday morning"
-    weekdays: ["Sun"]
-    earliest: "07:00"
-    latest: "18:00"
-    players: 1
-    holes: 18
 booking_window_days: 7
 skip_dates: []
