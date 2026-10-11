@@ -7,5 +7,5 @@ rules:
     latest: "18:00"
     players: "any"
     holes: 18
-booking_window_days: 7
+booking_window_days: 14
 skip_dates: []
