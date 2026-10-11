@@ -2,7 +2,7 @@
 rules:
   - name: "Alerts"
     courses: ["presidio"]
-    weekdays: ["Sat", "Sun"]
+    weekdays: ["Thu", "Fri", "Sat", "Sun"]
     earliest: "07:00"
     latest: "18:00"
     players: "any"
