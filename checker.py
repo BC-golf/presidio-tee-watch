@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Presidio Golf Course tee-time watcher.
+San Francisco tee-time watcher: Presidio, TPC Harding Park and the Fleming 9.
 
-Presidio books through Club Prophet (presidio.cps.golf). That site is a
-JavaScript app that fetches tee times from a private JSON API with a
-short-lived token. Rather than hard-code that auth flow (which changes),
-this script opens the real booking page in a headless browser, lets the page
-authenticate itself, captures the tee-time API call it makes, and then
-replays that same call for each date you care about.
+- Presidio books through Club Prophet (presidio.cps.golf).
+- Harding Park / Fleming 9 book through EZLinks (hardingpark.ezlinksgolf.com).
+
+For each site the script opens the real booking page in a headless browser,
+lets it load normally, then asks the page's own tee-time API for each date.
+If one site fails, the others still get checked.
 
 Usage:
     python checker.py                # normal run: check + notify
@@ -24,7 +24,7 @@ import re
 import smtplib
 import sys
 import urllib.request
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from email.message import EmailMessage
 from pathlib import Path
@@ -37,6 +37,27 @@ TZ = ZoneInfo("America/Los_Angeles")
 HERE = Path(__file__).parent
 STATE_FILE = HERE / "state" / "seen.json"
 WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+
+HARDING_URL = "https://hardingpark.ezlinksgolf.com/index.html#/search"
+SITE_LABEL = {"presidio": "Presidio", "harding": "Harding Park", "fleming": "Fleming 9"}
+SITE_BOOKING = {"presidio": BOOKING_URL, "harding": "https://hardingpark.ezlinksgolf.com/",
+                "fleming": "https://hardingpark.ezlinksgolf.com/"}
+
+
+def rule_sites(rule: dict) -> set[str]:
+    """Courses an alert covers. Alerts from before multi-course support = Presidio."""
+    c = rule.get("courses")
+    if not c:
+        return {"presidio"}
+    return {str(x).strip().lower() for x in (c if isinstance(c, list) else [c])}
+
+
+def site_of_key(key: str) -> str:
+    if "Fleming" in key:
+        return "fleming"
+    if "Harding" in key:
+        return "harding"
+    return "presidio"
 
 
 # --------------------------------------------------------------------------
@@ -52,6 +73,7 @@ class TeeTime:
     holes: int | None
     course: str | None
     price: float | None
+    site: str = "presidio"     # presidio | harding | fleming
 
     @property
     def key(self) -> str:
@@ -60,12 +82,16 @@ class TeeTime:
     def pretty(self) -> str:
         t = datetime.strptime(self.time, "%H:%M").strftime("%-I:%M %p")
         d = datetime.strptime(self.day, "%Y-%m-%d").strftime("%a %b %-d")
-        bits = [f"{d} at {t}"]
-        if self.open_spots is not None:
+        bits = [SITE_LABEL.get(self.site, self.site), f"{d} at {t}"]
+        if self.site != "presidio" and self.open_spots is not None:
+            lo = self.min_group or self.open_spots
+            bits.append(f"{lo} golfer{'s' if lo != 1 else ''}" if lo == self.open_spots
+                        else f"{lo}–{self.open_spots} golfers")
+        elif self.open_spots is not None:
             bits.append(f"{self.open_spots} spot{'s' if self.open_spots != 1 else ''}")
         if self.holes:
             bits.append(f"{self.holes} holes")
-        if self.course and "10" in self.course:
+        if self.site == "presidio" and self.course and "10" in self.course:
             bits.append("starts on 10")
         return " · ".join(bits)
 
@@ -100,6 +126,8 @@ def target_dates(cfg: dict, today: date) -> dict[str, list[dict]]:
 
 
 def matches(tt: TeeTime, rule: dict) -> bool:
+    if tt.site not in rule_sites(rule):
+        return False
     if not (rule.get("earliest", "00:00") <= tt.time <= rule.get("latest", "23:59")):
         return False
     players = rule.get("players", "any")
@@ -252,42 +280,176 @@ async ([dates, courseIds]) => {
 
 COURSE_IDS = "3,4"   # 3 = The Presidio (1st tee), 4 = The Presidio 10th Tee
 
+UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+      "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
 
-def fetch(dates: list[str], discover: bool = False) -> dict[str, list[TeeTime]]:
-    from playwright.sync_api import sync_playwright
 
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        ctx = browser.new_context(
-            timezone_id="America/Los_Angeles",
-            user_agent=("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                        "AppleWebKit/537.36 (KHTML, like Gecko) "
-                        "Chrome/129.0 Safari/537.36"),
-        )
-        page = ctx.new_page()
-        page.goto(BOOKING_URL, wait_until="networkidle", timeout=60_000)
-        page.wait_for_timeout(2_000)
-        data = page.evaluate(FETCH_JS, [dates, COURSE_IDS])
-        if discover:
-            page.screenshot(path=str(HERE / "discover.png"), full_page=True)
-        browser.close()
+def fetch_presidio(browser, dates: list[str], discover: bool) -> dict[str, list[TeeTime]]:
+    ctx = browser.new_context(timezone_id="America/Los_Angeles", user_agent=UA)
+    page = ctx.new_page()
+    page.goto(BOOKING_URL, wait_until="networkidle", timeout=60_000)
+    page.wait_for_timeout(2_000)
+    data = page.evaluate(FETCH_JS, [dates, COURSE_IDS])
+    if discover:
+        page.screenshot(path=str(HERE / "discover.png"), full_page=True)
+    ctx.close()
 
     if data.get("error"):
-        raise RuntimeError(f"Booking site refused the request: {data['error']}")
-
+        raise RuntimeError(f"Presidio booking site refused the request: {data['error']}")
     results: dict[str, list[TeeTime]] = {}
     for d, body in data["results"].items():
         if isinstance(body, dict) and body.get("httpError"):
-            print(f"[warn] {d}: HTTP {body['httpError']}", file=sys.stderr)
+            print(f"[warn] Presidio {d}: HTTP {body['httpError']}", file=sys.stderr)
             continue
         results[d] = parse_tee_times(body, d)
-        if discover:
-            print(f"\n{d}: {len(results[d])} open tee times")
-            if not results[d]:
-                print("   raw:", json.dumps(body)[:600])
-            for t in results[d]:
-                print("  ", t.pretty())
     return results
+
+
+# Harding Park / Fleming 9 (EZLinks). The search endpoint takes the number of
+# golfers and only returns slots that group can book, so we ask once per group
+# size we care about and record the smallest/largest size each slot accepts.
+HARDING_JS = r"""
+async ([dates, sizes]) => {
+  const init = await fetch('/api/search/init', {credentials: 'include'});
+  if (!init.ok) return {error: 'init HTTP ' + init.status};
+  const cfg = await init.json();
+  const ids = String(cfg.AllCourseIDs || '5999,6000').split(',').map(Number);
+  const out = {};
+  for (const iso of dates) {
+    const [y, m, d] = iso.split('-');
+    out[iso] = {};
+    for (const n of sizes) {
+      let r = null;
+      for (let attempt = 0; attempt < 4; attempt++) {   // site sometimes 403/429s briefly
+        if (attempt) await new Promise(res => setTimeout(res, 1500 * attempt));
+        r = await fetch('/api/search/search', {
+          method: 'POST', credentials: 'include',
+          headers: {'Content-Type': 'application/json; charset=utf-8'},
+          body: JSON.stringify({p01: ids, p02: `${m}/${d}/${y}`, p03: '5:00 AM', p04: '7:00 PM',
+                                p05: 0, p06: n, p07: false})
+        });
+        if (r.ok) break;
+      }
+      if (!r.ok) { out[iso][n] = {httpError: r.status}; continue; }
+      const j = await r.json();
+      out[iso][n] = (j.r06 || []).map(t => ({start: t.r15, course: t.r16, holes: t.r28, price: t.r08}));
+      await new Promise(res => setTimeout(res, 400));
+    }
+  }
+  return {results: out};
+}
+"""
+
+
+def parse_harding(raw: dict[str, dict], day: str) -> list[TeeTime]:
+    slots: dict[tuple, dict] = {}
+    for n, rows in raw.items():
+        if isinstance(rows, dict):        # httpError for this size
+            continue
+        for r in rows:
+            parsed = _parse_time(r.get("start"), day)
+            if not parsed or parsed[0] != day:
+                continue
+            course = "Fleming 9" if "fleming" in str(r.get("course", "")).lower() else "Harding Park"
+            k = (parsed[1], course)
+            # The site's "holes" field is unreliable for the main course; the
+            # course itself tells us: Fleming is a 9-hole course, Harding is 18.
+            e = slots.setdefault(k, {"sizes": set(), "holes": 9 if course == "Fleming 9" else 18, "prices": []})
+            e["sizes"].add(int(n))
+            if r.get("price") is not None:
+                e["prices"].append(float(r["price"]))
+    out = [TeeTime(day=day, time=t, open_spots=max(e["sizes"]), min_group=min(e["sizes"]),
+                   holes=e["holes"], course=course, price=min(e["prices"]) if e["prices"] else None,
+                   site="fleming" if course == "Fleming 9" else "harding")
+           for (t, course), e in slots.items()]
+    return sorted(out, key=lambda x: (x.time, x.course))
+
+
+def fetch_harding(p, dates: list[str], sizes: list[int], discover: bool) -> dict[str, list[TeeTime]]:
+    # Harding sits behind a "verifying you are human" check, so use a full
+    # (new-headless) Chromium when available and give the check time to clear.
+    args = ["--disable-blink-features=AutomationControlled"]
+    try:
+        browser = p.chromium.launch(channel="chromium", headless=True, args=args)
+    except Exception:
+        browser = p.chromium.launch(headless=True, args=args)
+    try:
+        ctx = browser.new_context(timezone_id="America/Los_Angeles", user_agent=UA,
+                                  locale="en-US", viewport={"width": 1280, "height": 900})
+        ctx.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+        page = ctx.new_page()
+        page.goto(HARDING_URL, wait_until="domcontentloaded", timeout=60_000)
+        for _ in range(30):                       # up to ~45s for the human check
+            if "just a moment" not in (page.title() or "").lower():
+                break
+            page.wait_for_timeout(1_500)
+        page.wait_for_load_state("networkidle", timeout=30_000)
+        page.wait_for_timeout(3_000)              # let the page's own first search finish
+        title = page.title() or ""
+        if discover:
+            page.screenshot(path=str(HERE / "discover-harding.png"), full_page=True)
+            print(f"Harding page title: {title!r}")
+        if "just a moment" in title.lower():
+            raise RuntimeError("blocked by the site's 'verifying you are human' check")
+        data = page.evaluate(HARDING_JS, [dates, sizes])
+    finally:
+        browser.close()
+    if data.get("error"):
+        raise RuntimeError(f"Harding booking site refused the request: {data['error']}")
+    out = {}
+    for d, raw in data["results"].items():
+        errs = {n: v["httpError"] for n, v in raw.items() if isinstance(v, dict)}
+        if errs:
+            print(f"[warn] Harding {d}: some searches failed {errs}", file=sys.stderr)
+        else:                             # only trust a day if every search worked
+            out[d] = parse_harding(raw, d)
+    return out
+
+
+def fetch(targets: dict[str, list[dict]], discover: bool = False):
+    """Returns ({day: [TeeTime]}, {(day, site) that were checked successfully})."""
+    from playwright.sync_api import sync_playwright
+
+    p_dates = sorted(d for d, rules in targets.items() if any("presidio" in rule_sites(r) for r in rules))
+    h_dates = sorted(d for d, rules in targets.items()
+                     if any(rule_sites(r) & {"harding", "fleming"} for r in rules))
+    sizes: set[int] = set()
+    for d in h_dates:
+        for r in targets[d]:
+            if rule_sites(r) & {"harding", "fleming"}:
+                pl = str(r.get("players", "any")).strip().lower()
+                sizes |= {1, 2, 3, 4} if pl in ("any", "0", "") else {int(pl)}
+
+    results: dict[str, list[TeeTime]] = {}
+    checked: set[tuple[str, str]] = set()
+    with sync_playwright() as p:
+        if p_dates:
+            try:
+                browser = p.chromium.launch(headless=True)
+                try:
+                    for d, tts in fetch_presidio(browser, p_dates, discover).items():
+                        results.setdefault(d, []).extend(tts)
+                        checked.add((d, "presidio"))
+                finally:
+                    browser.close()
+            except Exception as e:
+                print(f"[warn] Presidio check failed: {e}", file=sys.stderr)
+        if h_dates:
+            try:
+                for d, tts in fetch_harding(p, h_dates, sorted(sizes), discover).items():
+                    results.setdefault(d, []).extend(tts)
+                    checked.update({(d, "harding"), (d, "fleming")})
+            except Exception as e:
+                print(f"[warn] Harding Park check failed: {e}", file=sys.stderr)
+
+    if discover:
+        for d in sorted(results):
+            print(f"\n{d}: {len(results[d])} open tee times")
+            for t in sorted(results[d], key=lambda x: (x.site, x.time)):
+                print("  ", t.pretty())
+    if (p_dates or h_dates) and not checked:
+        raise RuntimeError("No course could be checked — see warnings above.")
+    return results, checked
 
 
 # --------------------------------------------------------------------------
@@ -296,8 +458,16 @@ def fetch(dates: list[str], discover: bool = False) -> dict[str, list[TeeTime]]:
 
 def notify(hits: list[tuple[TeeTime, dict]]) -> None:
     lines = [f"• {t.pretty()}  ({r.get('name', 'rule')})" for t, r in hits]
-    title = f"⛳ {len(hits)} Presidio tee time{'s' if len(hits) > 1 else ''} opened"
-    body = "\n".join(lines) + f"\n\nBook: {BOOKING_URL}"
+    title = f"⛳ {len(hits)} tee time{'s' if len(hits) > 1 else ''} opened"
+    sites = []
+    for t, _ in hits:
+        if t.site not in sites:
+            sites.append(t.site)
+    links = {}
+    for st in sites:   # Harding + Fleming share one booking page
+        links.setdefault(SITE_BOOKING[st], SITE_LABEL[st] if st != "fleming" else "Harding Park")
+    body = "\n".join(lines) + "\n\n" + "\n".join(f"Book {n}: {u}" for u, n in links.items())
+    click = SITE_BOOKING[sites[0]]
     sent = False
 
     topic = os.getenv("NTFY_TOPIC")
@@ -305,7 +475,7 @@ def notify(hits: list[tuple[TeeTime, dict]]) -> None:
         req = urllib.request.Request(
             f"https://ntfy.sh/{topic}", data=body.encode(),
             headers={"Title": title.encode("ascii", "ignore").decode().strip(),
-                     "Tags": "golf", "Click": BOOKING_URL, "Priority": "high"},
+                     "Tags": "golf", "Click": click, "Priority": "high"},
         )
         urllib.request.urlopen(req, timeout=15)
         sent = True
@@ -353,7 +523,7 @@ def run(dry_run: bool, discover: bool) -> int:
         return 0
     print("Checking:", ", ".join(sorted(targets)))
 
-    available = fetch(sorted(targets), discover=discover)
+    available, checked = fetch(targets, discover=discover)
     seen = load_seen()
     now_open: set[str] = set()
     hits: list[tuple[TeeTime, dict]] = []
@@ -378,8 +548,10 @@ def run(dry_run: bool, discover: bool) -> int:
         # Remember what's open now. Slots that get booked again drop out, so
         # if one re-opens later you'll be alerted again.
         stamp = datetime.now(TZ).isoformat(timespec="minutes")
-        checked_days = set(available)
-        seen = {k: v for k, v in seen.items() if k[:10] not in checked_days or k in now_open}
+        # Only forget slots for courses we actually checked this run, so a
+        # site being down doesn't cause repeat alerts when it comes back.
+        seen = {k: v for k, v in seen.items()
+                if (k[:10], site_of_key(k)) not in checked or k in now_open}
         for k in now_open:
             seen.setdefault(k, stamp)
         save_seen(seen, today)
