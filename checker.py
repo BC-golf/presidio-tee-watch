@@ -394,7 +394,10 @@ def fetch_harding(p, dates: list[str], sizes: list[int], discover: bool) -> dict
     for hl, channel in attempts:
         try:
             kw = {"channel": channel} if channel else {}
-            browser = p.chromium.launch(headless=hl, args=args, timeout=45_000, **kw)
+            # Pass the environment explicitly so Chrome sees the virtual screen
+            # (the browser driver started before the screen existed).
+            browser = p.chromium.launch(headless=hl, args=args, timeout=45_000,
+                                        env=dict(os.environ), **kw)
             headless, mode = hl, f"{channel or 'bundled'} {'headless' if hl else 'windowed'}"
             break
         except Exception as e:
@@ -420,7 +423,10 @@ def fetch_harding(p, dates: list[str], sizes: list[int], discover: bool) -> dict
             if "just a moment" not in (page.title() or "").lower():
                 break
             page.wait_for_timeout(1_500)
-        page.wait_for_load_state("networkidle", timeout=30_000)
+        try:
+            page.wait_for_load_state("networkidle", timeout=20_000)
+        except Exception:
+            pass                                  # busy pages never go fully idle; that's OK
         page.wait_for_timeout(3_000)              # let the page's own first search finish
         title = page.title() or ""
         if discover:
