@@ -2,10 +2,10 @@
 rules:
   - name: "Alerts"
     courses: ["presidio", "harding", "fleming"]
-    weekdays: ["Sat", "Sun"]
+    weekdays: ["Mon", "Tue", "Wed", "Thu"]
     earliest: "07:00"
     latest: "18:00"
     players: "any"
     holes: 18
-booking_window_days: 14
+booking_window_days: 7
 skip_dates: []
