@@ -1,9 +1,9 @@
 # Managed by the Tee Watch app. Edits made here directly also work.
 rules:
   - name: "Alerts"
-    weekdays: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    weekdays: ["Sat", "Sun"]
     earliest: "07:00"
-    latest: "18:00"
+    latest: "10:00"
     players: "any"
     holes: 18
 booking_window_days: 7
