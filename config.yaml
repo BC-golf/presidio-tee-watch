@@ -3,7 +3,7 @@ rules:
   - name: "Alerts"
     weekdays: ["Sat", "Sun"]
     earliest: "07:00"
-    latest: "23:00"
+    latest: "11:00"
     players: "any"
 booking_window_days: 7
 skip_dates: []
